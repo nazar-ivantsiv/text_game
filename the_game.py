@@ -1,11 +1,11 @@
 from random import randint, sample
-import random
+import random, os
 
-ITEMS_TO_SHOW_QTY = 10
+ITEMS_TO_SHOW_QTY = 4
 TRIES = 3
 
 #TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'set', 'dict', 'complex']
-TYPES = [random, int, float, str, bool, list, tuple, set, dict, complex]
+TYPES = [int, float, str, bool, list, tuple, set, dict, complex]
 
 TYPE_HINT = {'count':'Return number of occurrences of value',
 			 'index':'Return first index of value',
@@ -46,20 +46,20 @@ def generateDescription(item_type):
 			result.append(item)
 	return result
 
-def printDescription(description):
+def printDescription(description, limiter_shuffle=1):
 	
 	#Limit descriptions
-	if len(description) > ITEMS_TO_SHOW_QTY: 
-		show_items = ITEMS_TO_SHOW_QTY
-	else:
-		show_items = len(description)
+	if limiter_shuffle:
+		if len(description) > ITEMS_TO_SHOW_QTY: 
+			items_to_show = [description[i] for i in sample(range(len(description)), ITEMS_TO_SHOW_QTY)]
 
-	#Randomize limited qty of descriptions
-	items_to_show = [description[i] for i in sample(range(len(description)), show_items)]	
+		else:
+			items_to_show = [description[i] for i in sample(range(len(description)), len(description))]
+		print('\nCheck the hints below and type your answer (or press Enter to get new hints)\n')
+	else:
+		items_to_show = description
 
 	#Add descriptions to corresponding attribute
-
-	print('\nCheck the hints below and type your answer (or press Enter to get new hints)\n')
 	for item in items_to_show:
 		print('{} - {}'.format(item, TYPE_HINT.get(item,'')))
 
@@ -67,31 +67,42 @@ def Play(secret, description, TRIES):
 	counter = 0
 	answer = ''
 
-	while (answer != secret) and (counter < TRIES):
+	while True:
 		printDescription(description)
 		#print(secret)		
 		answer = raw_input('\nANSWER: >> ')
 		counter += 1
+		if (answer.lower() == secret) or (counter == TRIES):
+			break
 	return counter
 
-print(chr(27) + "[2J")
-print('### THE REAL Pythonista GAME ###\n')
-print('Guess the Python basic varaible type by its methods listed below:')
+def footer(msg):
+	global description
+	print('\n'+''.join(['#' for i in range(60)]))
+	print(msg)
+	print(''.join(['#' for i in range(60)])+'\n')
 
-restart = 'y'
-while restart != 'n':
-	if restart == 'y':
-		type_idx = randint(0,len(TYPES)-1)				#Idx of the secret type to guess
-		secret_type = TYPES[type_idx]					#Secrets type	
-		secret = str(TYPES[type_idx]).split('\'')[1]	#Converts "<type 'tuple'>" to "tuple")
-		description = generateDescription(secret_type)
-		if Play(secret, description, TRIES) < TRIES:
-			print('\n'+''.join(['#' for i in range(60)]))
-			print('Right answer. Congratulations!')
-			print(''.join(['#' for i in range(60)])+'\n')
-		else:
-			print('Sorry. You loose.')	
-	restart = str(raw_input('Do you want to try again? (y/n)'))
-else: 
-	print('Thanks for playing. Bye!')
-	print(''.join(['#' for i in range(60)]))
+### GAMEPLAY ###
+while True:
+	type_idx = randint(0,len(TYPES)-1)				#Idx of the secret type to guess
+	secret_type = TYPES[type_idx]					#Secrets type	
+	secret = str(TYPES[type_idx]).split('\'')[1]	#Converts ex. "<type 'tuple'>" to "tuple"
+	description = generateDescription(secret_type)
+
+	os.system('clear')
+	print('### THE REAL Pythonista GAME ###\n')
+	print('Guess the Python basic varaible type by its methods listed below:')
+
+	if Play(secret, description, TRIES) < TRIES:
+		footer('Right answer. Congratulations!')
+		printDescription(description, 0)
+	else:
+		footer('Sorry. You loose.')
+		print('THE RIGHT ANSWER IS: {}'.format(secret))
+
+	restart = raw_input('Do you want to try again (y/n): ')
+	if restart.lower() == 'n':
+		break
+
+print('Thanks for playing. Bye!')
+print(''.join(['#' for i in range(60)]))
