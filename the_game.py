@@ -4,7 +4,27 @@ import random, os
 ITEMS_TO_SHOW_QTY = 4
 TRIES = 3
 
-#TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'set', 'dict', 'complex']
+TYPES_AS_STRING = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'set', 'dict', 'complex']
+
+def get_hint_of_object(object_type):
+	"""
+	input: 'object_type' name as string
+	output: dictionari with hints by object's methods
+	"""
+	import pydoc
+
+	variable_s = 'variable = '
+	exec(variable_s + object_type) in globals(), locals()
+	variable_type = variable
+
+	method_description = lambda x: pydoc.getdoc(getattr(variable_type, x))
+
+	methods_list = [x for x in dir(variable) if x[0] != '_' ]
+	hints_dict = {x:method_description(x) for x in methods_list}
+
+	return hints_dict
+
+
 TYPES = [int, float, str, bool, list, tuple, set, dict, complex]
 
 TYPE_HINT = {'count':'Return number of occurrences of value',
