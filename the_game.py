@@ -1,108 +1,137 @@
 from random import randint, sample
-import random, os
 
-ITEMS_TO_SHOW_QTY = 4
+import os
+import random
+import pydoc
+import sys
+
 TRIES = 3
 
-#TYPES = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'set', 'dict', 'complex']
-TYPES = [int, float, str, bool, list, tuple, set, dict, complex]
+class NewGame(object):
 
-TYPE_HINT = {'count':'Return number of occurrences of value',
-			 'index':'Return first index of value',
-			 'append':'Append object to end',
-			 'extend':'Extend by appending elements from the iterable',
-			 'insert':'Insert object before index',
-			 'pop':'Remove and return item at index(key)',
-			 'remove':'Remove first occurrence of value',
-			 'reverse':'Reverse *IN PLACE*',
-			 'sort':'Stable sort *IN PLACE*',
-			 'clear':'Remove all items',
-			 'copy':'A shallow copy',
-			 'get':'Get item by index, else return substitute value',
-			 'items':'list of D\'s (key, value) pairs, as 2-tuples',
-			 'imag':'The imaginary part of a complex number',
-			 'real':'The real part of a complex number',
-			 'denominator':'The denominator of a rational number in lowest terms',
-			 'numerator':'The numerator of a rational number in lowest terms',
-			 'format':'Return a formatted version of item, using substitutions from args and kwargs',
-			 'isalnum':'Return True if all characters are alphanumeric',
-			 'isalpha':'Return True if all characters are alphabetic',
-			 'isdigit':'Return True if all characters are digits',
-			 'join':'Return concatenaterd item',
-			 'partition':'Search for the separator and return the part before it and, the separator itself, and the part after it',
-			 'rfind':'Return the highest index where subitem sub is found',
-			 'find':'Return the lowest index where subitem sub is found',
-			 'split':'Return a list of the words in the string',
-			 'strip':'Strips leading and trailing whitespace'
-			 }
+	TYPES_AS_STRING = ['int', 'float', 'str', 'bool', 'list', 'tuple', 'set', 'dict', 'complex']
 
-
-#Generates a list 
-def generateDescription(item_type):
-	result = list()
-	dir_list = dir(item_type)		#Get the list 'dir()'
-	for item in dir_list:
-		if (item.find('_') < 0):    #Exclude overloaded functions (with '__')
-			result.append(item)
-	return result
-
-def printDescription(description, limiter_shuffle=1):
-	
-	#Limit descriptions
-	if limiter_shuffle:
-		if len(description) > ITEMS_TO_SHOW_QTY: 
-			items_to_show = [description[i] for i in sample(range(len(description)), ITEMS_TO_SHOW_QTY)]
-
+	def __init__(self, items_to_show_qty, secret=''):
+		self.ITEMS_TO_SHOW_QTY = items_to_show_qty
+		
+		if secret == '':
+			type_idx = randint(0,len(self.TYPES_AS_STRING)-1)			# Idx of the secret type to guess
+			self.__secret = self.TYPES_AS_STRING[type_idx]					# Secret type	
+			self.description = self.__get_hint_of_object()	# Dict of methods, attrs + descriptions
+			self.property_list = self.description.keys()					# List of methods and attributes of SECRET		
 		else:
-			items_to_show = [description[i] for i in sample(range(len(description)), len(description))]
-		print('\nCheck the hints below and type your answer (or press Enter to get new hints)\n')
-	else:
-		items_to_show = description
+			if secret in seld.TYPES_AS_STRING:
+				self.__secret = secret
+				self.description = self.__get_hint_of_object()	# Dict of methods, attrs + descriptions
+				self.property_list = self.description.keys()			# List of methods and attributes of SECRET		
+		
+	def __get_hint_of_object(self):
+		"""
+		privat method
+		Generates a dict of 'property' : 'Description'
 
-	#Add descriptions to corresponding attribute
-	for item in items_to_show:
-		print('{} - {}'.format(item, TYPE_HINT.get(item,'')))
+		input: 'object_type' name as string
+		output: dictionari with hints by object's methods
+		"""
 
-def Play(secret, description, TRIES):
-	counter = 0
-	answer = ''
+		variable_s = 'variable = '
+		exec(variable_s + self.__secret) in globals(), locals()
+		variable_type = variable
 
-	while True:
-		printDescription(description)
-		#print(secret)		
-		answer = raw_input('\nANSWER: >> ')
-		counter += 1
-		if (answer.lower() == secret) or (counter == TRIES):
-			break
-	return counter
+		method_description = lambda x: pydoc.getdoc(getattr(variable_type, x))
+
+		methods_list = [x for x in dir(variable) if x[0] != '_' ]
+		hints_dict = {x:method_description(x) for x in methods_list}
+
+		return hints_dict
+
+	def print_description(self, limiter_shuffle=1):
+		'''
+		Prints descriptions nice and tidy.
+
+		limiter_shuffle - Limit count of descriptions to be generated.
+		'''
+		if limiter_shuffle:
+			if len(self.property_list) > self.ITEMS_TO_SHOW_QTY: 
+				items_to_show = sample(self.property_list, self.ITEMS_TO_SHOW_QTY)
+			else:
+				items_to_show = sample(self.property_list, len(self.property_list))
+
+			print(	'#'*60+
+					'\n\nCheck the hints below and type your answer (or press Enter to get new hints)\n'
+					)
+		else:
+			items_to_show = self.property_list 
+		
+		# Add descriptions to corresponding attribute
+		# Prints in nice and tidy format and Cuts out everything after '>>>' in descrption
+		for item in items_to_show:
+			print('-' * 60)
+			descr_str = self.description.get(item,'')
+			descr_str = descr_str.replace(self.__secret, '___')
+
+			if '>>>' in descr_str:
+				cursor_idx = descr_str.find('>>>')
+			else:
+				cursor_idx = len(descr_str)
+
+			print(	' '*20+	
+					'*** {} ***\n\n {}'
+					''.format( item, descr_str[ 0: cursor_idx] ))	# Cuts the string after '>>>'
+
+		print('-' * 60)
+
+	def check_answer(self, answer):
+		if (answer.lower() == self.__secret):
+			return 1
+		else:
+			return 0
+
+	def get_secret(self):
+		return self.__secret
 
 def footer(msg):
-	global description
-	print('\n'+''.join(['#' for i in range(60)]))
+	print('\n'+'#' * 60)
 	print(msg)
-	print(''.join(['#' for i in range(60)])+'\n')
+	print('#' * 60 + '\n')
 
 ### GAMEPLAY ###
 while True:
-	type_idx = randint(0,len(TYPES)-1)				#Idx of the secret type to guess
-	secret_type = TYPES[type_idx]					#Secrets type	
-	secret = str(TYPES[type_idx]).split('\'')[1]	#Converts ex. "<type 'tuple'>" to "tuple"
-	description = generateDescription(secret_type)
 
 	os.system('clear')
 	print('### THE REAL Pythonista GAME ###\n')
-	print('Guess the Python basic varaible type by its methods listed below:')
+	print('Guess the Python basic varaible type by its methods listed below:\n')
 
-	if Play(secret, description, TRIES) < TRIES:
-		footer('Right answer. Congratulations!')
-		printDescription(description, 0)
-	else:
-		footer('Sorry. You loose.')
-		print('THE RIGHT ANSWER IS: {}'.format(secret))
+	game = NewGame(3)
+	game.counter = 1
 
-	restart = raw_input('Do you want to try again (y/n): ')
-	if restart.lower() == 'n':
-		break
+	#  Play and wait for right answer or TRIES limit exceeded
+	while True:
+		game.print_description(1)
 
-print('Thanks for playing. Bye!')
-print(''.join(['#' for i in range(60)]))
+		print(	'\nTRY {}/{}:'
+				'\n| {} |'.format(game.counter, TRIES,' | '.join(game.TYPES_AS_STRING))) 
+		answer = raw_input('Your ANSWER: >> ')
+
+
+		if game.check_answer(answer):
+			footer('Right answer. Congratulations!')
+			break
+		if (game.counter >= TRIES):
+			footer('Sorry. You loose.')
+			print('THE RIGHT ANSWER IS: {}'.format(game.get_secret()))
+			break
+
+		game.counter += 1
+
+	# Continue?
+	while True:
+		restart = raw_input('Do you want to try again (y/n): ')
+		if restart.lower() == 'n':		
+			print('Thanks for playing. Bye!')
+			print('#' * 60)
+			sys.exit()
+		elif restart.lower() == 'y':
+			break
+		else:
+			continue
